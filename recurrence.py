@@ -1,23 +1,33 @@
 from datetime import date
-from dateutil.rrule import rrule, MONTHLY, WEEKLY
+from dateutil.relativedelta import relativedelta
+from dateutil.rrule import rrule, rruleset, MONTHLY, WEEKLY, DAILY
 from decimal import Decimal
 
 from functools import partial
+
+SERIAL_BASE = date(1899, 12, 30)
 
 class RecurringPayment(object):
 
     def __init__(self, recurrence, description,
                  amount_in=None, amount_out=None,
-                 start_date=date.min, end_date=date.max):
+                 start_date=None, end_date=None):
+        self.description = description
+
         if not amount_in:
             amount_in = "0.00"
         if not amount_out:
             amount_out = "0.00"
-        self.description = description
+        self.amount = (Decimal(amount_in) - Decimal(amount_out)).quantize(Decimal("0.00"))
 
-        self.amount = Decimal(amount_in) - Decimal(amount_out)
-        self.start_date = start_date
-        self.end_date = end_date
+        if start_date:
+            self.start_date = SERIAL_BASE + relativedelta(days=start_date)
+        else:
+            self.start_date = None
+        if end_date:
+            self.end_date = SERIAL_BASE + relativedelta(days=end_date)
+        else:
+            self.end_date = None
 
         if recurrence == "w":
             self.part_rule = partial(rrule, freq=WEEKLY)
@@ -31,6 +41,23 @@ class RecurringPayment(object):
             self.part_rule = partial(rrule, freq=MONTHLY, bymonthday=monthday)
 
     def get_payments_for_range(self, range_start, range_end):
-        return list(self.part_rule(
-                dtstart=max(range_start, self.start_date),
-                until=min(range_end, self.end_date)))
+        payments = rruleset()
+        
+
+        if self.start_date:
+            recurrence_start = self.start_date
+        else:
+            recurrence_start = range_start
+
+        if self.end_date:
+            recurrence_end = self.end_date
+        else:
+            recurrence_end = range_end
+
+        payments.exrule(rrule(freq=DAILY, dtstart=min(range_start, recurrence_start), until=range_start - relativedelta(days=1)))
+        payments.exrule(rrule(freq=DAILY, dtstart=range_end + relativedelta(days=1)))
+        payments.rrule(self.part_rule(
+                dtstart=recurrence_start,
+                until=recurrence_end))
+
+        return list(payments)
