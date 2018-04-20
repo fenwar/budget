@@ -20,7 +20,7 @@ class PaymentRow(object):
         """
         row = [self.payment_date.strftime("%d/%m/%Y"), '', self.description, '', '']
         if self.amount > 0:
-            row[3] = str(self.amount)
+            row[3] = "£{}".format(self.amount)
         else:
-            row[4] = str(-self.amount)
+            row[4] = "£{}".format(-self.amount)
         return row
