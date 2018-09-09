@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-from datetime import date
+import argparse
+import datetime
+import sys
 
 from dateutil.relativedelta import relativedelta
 
@@ -11,6 +13,39 @@ from recurrence import RecurringPayment
 SPREADSHEET_ID = "1iyPkOwg_sQcxYIFruC7kjWiq4FLuD6SkHZmxR4KDR6Y"
 TEMPLATE_RANGE = "Recurring Payments!B5:G"
 BLANK_SHEET = "Blank Month"
+
+DATE_PARSE_FORMAT="%Y-%m-%d"
+DATE_HUMAN_FORMAT="YYYY-MM-DD"
+
+def parse_args():
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--create",
+        type=date_argument,
+        metavar=DATE_HUMAN_FORMAT,
+        help="""Create a budget sheet with recurring payments for 1 month
+                starting from %(metavar)s.""")
+    raw_args = ap.parse_args()
+    return ap.parse_args()
+
+
+def date_argument(arg):
+    try:
+        return datetime.datetime.strptime(arg, DATE_PARSE_FORMAT).date()
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+                """Please enter a date in the format {0} (couldn't parse {1}).
+                """.format(DATE_HUMAN_FORMAT, arg))
+
+
+def main():
+    args = parse_args()
+    sheets_api = connect_to_api()
+    budget = BudgetTemplate(sheets_api)
+
+    if args.create:
+        payments = budget.create_new_month(args.create)
+
 
 class BudgetTemplate():
     def __init__(self, sheets_api):
@@ -103,10 +138,11 @@ class BudgetTemplate():
                 range="{}!A5:E5".format(sheet_title),
                 valueInputOption="USER_ENTERED",
                 body={"values": [payment.as_row_values() for payment in payments]}).execute()
+
+        # copy the running total formula to the whole column:
+
+
         return payments
 
 if __name__ == "__main__":
-    sheets_api = connect_to_api()
-    budget = BudgetTemplate(sheets_api)
-
-    payments = budget.create_new_month(date(2018, 4, 7))
+    sys.exit(main())
