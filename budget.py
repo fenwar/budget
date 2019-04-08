@@ -39,12 +39,28 @@ def date_argument(arg):
 
 
 def main():
-    args = parse_args()
     sheets_api = connect_to_api()
+    args = parse_args()
     budget = BudgetTemplate(sheets_api)
 
     if args.create:
         payments = budget.create_new_month(args.create)
+        
+        for payment in payments:
+            print(payment)
+
+    else:
+        # work out the budget totals for an entire calendar year:
+        payments = budget.generate_payments(
+            datetime.date(2018, 11, 1),
+            datetime.date(2019, 11, 30),
+        )
+        total = 0
+        for payment in payments:
+            print(payment)
+            total += payment.amount
+
+        print("Total balance is {}.".format(total))
 
 
 class BudgetTemplate():

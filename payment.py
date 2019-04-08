@@ -24,3 +24,6 @@ class PaymentRow(object):
         else:
             row[4] = "£{}".format(-self.amount)
         return row
+
+    def __str__(self):
+        return "{} : {} ({})".format(self.payment_date, self.amount, self.description)
