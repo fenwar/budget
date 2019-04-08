@@ -1,6 +1,6 @@
 from datetime import date
 from dateutil.relativedelta import relativedelta
-from dateutil.rrule import rrule, rruleset, MONTHLY, WEEKLY, DAILY
+from dateutil.rrule import rrule, rruleset, DAILY, WEEKLY, MONTHLY, YEARLY
 from decimal import Decimal
 
 from functools import partial
@@ -29,12 +29,15 @@ class RecurringPayment(object):
         else:
             self.end_date = None
 
-        if recurrence == "w":
-            self.part_rule = partial(rrule, freq=WEEKLY)
-        elif recurrence == "2w":
-            self.part_rule = partial(rrule, freq=WEEKLY, interval=2)
-        elif recurrence == "4w":
-            self.part_rule = partial(rrule, freq=WEEKLY, interval=4)
+        if str(recurrence).endswith("w"):
+            week_count = recurrence.rstrip("w")
+            if week_count:
+                week_count = int(week_count)
+            else:
+                week_count = 1
+            self.part_rule = partial(rrule, freq=WEEKLY, interval=week_count)
+        elif recurrence == "y":
+            self.part_rule = partial(rrule, freq=YEARLY)
         else:
             # An integer value on its own just means monthly on this date
             monthday = int(recurrence)
@@ -42,7 +45,6 @@ class RecurringPayment(object):
 
     def get_payments_for_range(self, range_start, range_end):
         payments = rruleset()
-        
 
         if self.start_date:
             recurrence_start = self.start_date
